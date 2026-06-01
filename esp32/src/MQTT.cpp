@@ -1,74 +1,67 @@
 #include "MQTT.h"
 
 MQTT::MQTT(String clientId, String topicPrefix)
-: _clientId(clientId), _topicPrefix(topicPrefix), _isTLS(false) {
+: _mqttClient(_wifiClient), _clientId(clientId), _topicPrefix(topicPrefix) {
     Serial.println("[MQTT] Initialized with client ID and topic prefix");
-    _mqttClient = new PubSubClient(_wifiClient);
 }
 
 bool MQTT::connectToBroker(int port) {
-    _isTLS = false;
-    _setupMQTTClient(port);
+    _port = port;
+    _mqttClient.setServer(_broker, _port);
+    _mqttClient.setBufferSize(1024);
+    _mqttClient.setSocketTimeout(2);   // seconds — fast-fail when broker unreachable
 
-    Serial.println("[MQTT] Connecting to broker...");
-
-    if (_mqttClient->connect(_clientId.c_str())) {
-        Serial.println("[MQTT] Connected successfully!");
-        return true;
-    } else {
-        Serial.print("[MQTT] Connection failed with state: ");
-        Serial.println(_mqttClient->state());
-        return false;
-    }
+    return _tryConnect();
 }
 
-void MQTT::_setupMQTTClient(int port) {
-    _mqttClient = new PubSubClient(_wifiClient);
-    _mqttClient->setServer(_broker, port);
-    _mqttClient->setBufferSize(1024);
+bool MQTT::_tryConnect() {
+    if (WiFi.status() != WL_CONNECTED) return false;
+
+    Serial.print("[MQTT] Connecting to broker as ");
+    Serial.println(_clientId);
+
+    if (_mqttClient.connect(_clientId.c_str())) {
+        Serial.println("[MQTT] Connected.");
+        if (_lastSubscribe.length() > 0) {
+            _mqttClient.subscribe(_lastSubscribe.c_str());
+        }
+        return true;
+    }
+    Serial.print("[MQTT] Connect failed, state: ");
+    Serial.println(_mqttClient.state());
+    return false;
 }
 
 bool MQTT::publishMessage(String subtopic, String message) {
+    if (!_mqttClient.connected()) return false;
     String fullTopic = _topicPrefix + "/" + subtopic;
-
-    Serial.print("[MQTT] Publishing to topic: ");
-    Serial.println(fullTopic);
-
-    if (_mqttClient->publish(fullTopic.c_str(), message.c_str())) {
-        Serial.println("[MQTT] Message published successfully");
-        return true;
-    } else {
-        Serial.println("[MQTT] Failed to publish message");
-        return false;
-    }
+    return _mqttClient.publish(fullTopic.c_str(), message.c_str());
 }
 
 bool MQTT::subscribeTopic(String subtopic) {
     String fullTopic = _topicPrefix + "/" + subtopic;
+    _lastSubscribe = fullTopic;
 
     Serial.print("[MQTT] Subscribing to topic: ");
     Serial.println(fullTopic);
 
-    if (_mqttClient->subscribe(fullTopic.c_str())) {
-        Serial.println("[MQTT] Subscribed successfully");
-        return true;
-    } else {
-        Serial.println("[MQTT] Failed to subscribe");
-        return false;
-    }
+    if (!_mqttClient.connected()) return false;
+    return _mqttClient.subscribe(fullTopic.c_str());
 }
 
 void MQTT::setCallback(void (*callback)(char*, uint8_t*, unsigned int)) {
-    _mqttClient->setCallback(callback);
+    _mqttClient.setCallback(callback);
 }
 
 void MQTT::loop() {
-    _mqttClient->loop();
-
-    // Reconnect if connection is lost
-    if (!_mqttClient->connected()) {
-        Serial.println("[MQTT] Connection lost. Attempting to reconnect...");
-        delay(1000);
-        connectToBroker();
+    if (_mqttClient.connected()) {
+        _mqttClient.loop();
+        return;
     }
+
+    // Non-blocking, throttled reconnect.
+    uint32_t now = millis();
+    if (now - _lastReconnectAttempt < RECONNECT_INTERVAL_MS) return;
+    _lastReconnectAttempt = now;
+    _tryConnect();
 }

@@ -7,16 +7,31 @@
 #include <SPI.h>
 
 #include "Sensors.h"
+#include "StateMachine.h"
 
 class Display {
 public:
     Display();
     void begin();
-    void renderStatus(const SensorReading& r, const char* stateLabel);
+
+    /** Render a boot/banner line at the top under the title. */
+    void renderBanner(const char* line);
+
+    void renderStatus(const SensorReading& r,
+                      const char* stateLabel,
+                      const char* modeLabel,
+                      const Targets& targets,
+                      bool wifiOk,
+                      bool mqttOk);
 
 private:
-    SPIClass _spi;
+    SPIClass        _spi;
     Adafruit_ST7789 _tft;
+    bool            _layoutDrawn = false;
+
+    void _drawStaticLayout();
+    void _printRow(int y, const char* label, const String& value, uint16_t color);
+    void _printFooter(bool wifiOk, bool mqttOk);
 };
 
 #endif
