@@ -101,4 +101,12 @@ namespace MqttKeys {
 #define MQTT_TOPIC_PREFIX "greenhouse/dev"
 #endif
 
+// If WIFI_EAP_USERNAME is defined (typically via .env), boot connects using
+// WPA2-Enterprise (PEAP/MSCHAPv2). Otherwise, plain WPA-PSK is used.
+#ifdef WIFI_EAP_USERNAME
+#define GREENHOUSE_USE_WPA_ENTERPRISE 1
+#else
+#define GREENHOUSE_USE_WPA_ENTERPRISE 0
+#endif
+
 #endif

@@ -161,7 +161,12 @@ void setup() {
     sensors.begin();
     display.renderBanner("Connecting WiFi...");
 
+#if GREENHOUSE_USE_WPA_ENTERPRISE
+    display.renderBanner("Connecting (Enterprise)...");
+    bool wifiOk = wifi.connectToWPAEnterprise(WIFI_SSID, WIFI_EAP_USERNAME, WIFI_PASSWORD);
+#else
     bool wifiOk = wifi.connectToWiFi(WIFI_SSID, WIFI_PASSWORD);
+#endif
     display.renderBanner(wifiOk ? "WiFi OK" : "WiFi: continuing offline");
 
     // MQTT setup is non-blocking; an unreachable broker will just retry in loop().
