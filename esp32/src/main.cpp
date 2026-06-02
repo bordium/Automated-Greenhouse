@@ -1,5 +1,8 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/semphr.h>
 
 #include "Config.h"
 #include "WifiManager.h"
@@ -19,6 +22,13 @@ static StateMachine fsm(actuators);
 static uint32_t lastSensorMs  = 0;
 static uint32_t lastPublishMs = 0;
 static bool     mqttSetupDone = false;
+
+// MQTT runs on a dedicated FreeRTOS task pinned to core 0 (next to the WiFi
+// stack) so incoming cmd/* messages get serviced within ~20 ms even when the
+// main loop is busy with sensor reads or display redraws. PubSubClient isn't
+// thread-safe, so all access goes through `mqttMutex`.
+static SemaphoreHandle_t mqttMutex      = nullptr;
+static TaskHandle_t      mqttTaskHandle = nullptr;
 
 // ---------- Command parsing helpers ----------
 
@@ -81,18 +91,32 @@ static void onMqttMessage(char* topic, uint8_t* payload, unsigned int length) {
     }
 
     if (t.endsWith("/cmd/pump")) {
-        actuators.setPump(parseLong(p) ? PWM_MAX_DUTY : 0);
+        long v = constrain(parseLong(p), 0L, (long)PWM_MAX_DUTY);
+        actuators.setPump((uint8_t)v);
     } else if (t.endsWith("/cmd/fan")) {
         long v = constrain(parseLong(p), 0L, (long)PWM_MAX_DUTY);
         actuators.setFan((uint8_t)v);
     } else if (t.endsWith("/cmd/heater1")) {
-        actuators.setHeater1(parseLong(p) != 0);
+        long v = constrain(parseLong(p), 0L, (long)PWM_MAX_DUTY);
+        actuators.setHeater1((uint8_t)v);
     } else if (t.endsWith("/cmd/heater2")) {
-        actuators.setHeater2(parseLong(p) != 0);
+        long v = constrain(parseLong(p), 0L, (long)PWM_MAX_DUTY);
+        actuators.setHeater2((uint8_t)v);
     }
 }
 
 // ---------- Telemetry ----------
+
+// FreeRTOS task — owns the polling side of PubSubClient.
+static void mqttTask(void* /*param*/) {
+    for (;;) {
+        if (mqttMutex && xSemaphoreTake(mqttMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+            mqtt.loop();
+            xSemaphoreGive(mqttMutex);
+        }
+        vTaskDelay(pdMS_TO_TICKS(20));   // ~50 Hz
+    }
+}
 
 static void publishTelemetry(const SensorReading& r) {
     if (!mqtt.isConnected()) return;
@@ -128,10 +152,10 @@ static void publishTelemetry(const SensorReading& r) {
         doc["soil_bin"] = nullptr;
     }
 
-    doc["pump"]    = actuators.pumpDuty() > 0 ? 1 : 0;
+    doc["pump"]    = actuators.pumpDuty();
     doc["fan"]     = actuators.fanDuty();
-    doc["heater1"] = actuators.heater1On() ? 1 : 0;
-    doc["heater2"] = actuators.heater2On() ? 1 : 0;
+    doc["heater1"] = actuators.heater1Duty();
+    doc["heater2"] = actuators.heater2Duty();
     doc["led"]     = actuators.ledDuty();
     doc["uptime_ms"] = millis();
 
@@ -144,7 +168,11 @@ static void publishTelemetry(const SensorReading& r) {
 
     String payload;
     serializeJson(doc, payload);
-    mqtt.publishMessage(MqttKeys::TELEMETRY, payload);
+
+    if (mqttMutex && xSemaphoreTake(mqttMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+        mqtt.publishMessage(MqttKeys::TELEMETRY, payload);
+        xSemaphoreGive(mqttMutex);
+    }
 }
 
 // ---------- Arduino entry points ----------
@@ -158,22 +186,45 @@ void setup() {
     display.begin();
     display.renderBanner("Booting...");
 
+    // ESP32 always boots in MANUAL — the operator decides when (and via what
+    // plant) to enable AUTO control from the app's "Track" button. We don't
+    // persist mode across reboots, so any prior AUTO state is intentionally
+    // forgotten.
+    fsm.setMode(GhMode::MANUAL);
+    Serial.printf("[Boot] FSM mode = %s\n", fsm.modeLabel());
+
     sensors.begin();
     display.renderBanner("Connecting WiFi...");
 
+    display.renderBanner("Scanning APs...");
+    wifi.scanAndPrint(WIFI_SSID);
+
 #if GREENHOUSE_USE_WPA_ENTERPRISE
     display.renderBanner("Connecting (Enterprise)...");
-    bool wifiOk = wifi.connectToWPAEnterprise(WIFI_SSID, WIFI_EAP_USERNAME, WIFI_PASSWORD);
+    bool wifiOk = wifi.connectToWPAEnterprise(
+        WIFI_SSID, WIFI_EAP_USERNAME, WIFI_PASSWORD, WIFI_EAP_ANON_IDENTITY);
 #else
     bool wifiOk = wifi.connectToWiFi(WIFI_SSID, WIFI_PASSWORD);
 #endif
     display.renderBanner(wifiOk ? "WiFi OK" : "WiFi: continuing offline");
 
-    // MQTT setup is non-blocking; an unreachable broker will just retry in loop().
+    // MQTT setup is non-blocking; an unreachable broker just retries in the task.
     mqtt.setCallback(onMqttMessage);
     mqtt.connectToBroker();
     mqtt.subscribeTopic(MqttKeys::CMD);
     mqttSetupDone = true;
+
+    // Spin up the MQTT pump on core 0 (the "PRO CPU", same core as WiFi).
+    mqttMutex = xSemaphoreCreateMutex();
+    xTaskCreatePinnedToCore(
+        mqttTask,           // entry point
+        "mqtt-loop",        // task name (for debug)
+        8192,               // stack size in bytes
+        nullptr,            // parameter
+        2,                  // priority (low-medium)
+        &mqttTaskHandle,    // task handle out
+        0                   // pinned to core 0
+    );
 
     Serial.println("[Boot] Ready");
 }
@@ -199,5 +250,5 @@ void loop() {
         publishTelemetry(sensors.latest());
     }
 
-    if (mqttSetupDone) mqtt.loop();
+    // mqtt.loop() no longer called here — the dedicated mqttTask drives it on core 0.
 }

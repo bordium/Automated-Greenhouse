@@ -89,10 +89,10 @@ All topics are under `${MQTT_TOPIC_PREFIX}/`.
   "water_level":    "OK",       // "OK" or "NOT OK" (proxy: DS18B20 health)
   "soil_pct":       42.1,       // 0..100 (or null on sensor fail)
   "soil_bin":       2,          // 1, 2, or 3 (nearest bin)
-  "pump":           0,          // 0 or 1
+  "pump":           0,          // 0..255 duty
   "fan":            128,        // 0..255 duty
-  "heater1":        1,          // 0 or 1
-  "heater2":        0,
+  "heater1":        12,         // 0..255 duty (AUTO uses 12 ≈ 5%)
+  "heater2":        12,
   "led":            255,        // 0..255 duty
   "uptime_ms":      123456,
   "targets": {                  // echoed back so the app stays in sync
@@ -110,11 +110,11 @@ All topics are under `${MQTT_TOPIC_PREFIX}/`.
 |-----------------------|--------------------------------------|-------|
 | `cmd/mode`            | `"AUTO"` or `"MANUAL"`               | switches FSM source |
 | `cmd/targets`         | JSON (see below)                     | overwrite any subset of targets |
-| `cmd/pump`            | `0` / `1`                            | manual mode only |
-| `cmd/fan`             | `0..255`                             | duty cycle |
-| `cmd/heater1`         | `0` / `1`                            |       |
-| `cmd/heater2`         | `0` / `1`                            |       |
-| `cmd/led`             | `0..255`                             | LED always honors this regardless of mode |
+| `cmd/pump`            | `0..255` (PWM duty)                  | manual mode only; 0 = off |
+| `cmd/fan`             | `0..255` (PWM duty)                  | manual mode only |
+| `cmd/heater1`         | `0..255` (PWM duty)                  | manual mode only; AUTO uses 5 % |
+| `cmd/heater2`         | `0..255` (PWM duty)                  | manual mode only; AUTO uses 5 % |
+| `cmd/led`             | `0..255` (PWM duty)                  | always honored regardless of mode |
 
 `cmd/targets` payload:
 ```json

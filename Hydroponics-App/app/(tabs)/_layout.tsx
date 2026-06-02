@@ -32,13 +32,6 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={26} name="slider.horizontal.3" color={color} />,
         }}
       />
-      <Tabs.Screen
-        name="plants"
-        options={{
-          title: 'Plants',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="leaf.fill" color={color} />,
-        }}
-      />
     </Tabs>
   );
 }

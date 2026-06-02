@@ -58,7 +58,7 @@ public:
 private:
     Actuators& _act;
     ActionMask _actions          = 0;
-    GhMode     _mode             = GhMode::AUTO;
+    GhMode     _mode             = GhMode::MANUAL;
     Targets    _targets;
     uint32_t   _pumpStartedAt    = 0;
     uint32_t   _pumpCooldownUntil = 0;

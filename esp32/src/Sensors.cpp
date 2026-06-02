@@ -87,7 +87,7 @@ void Sensors::_readSoil() {
     _soilStats.sumPct += pct;
     _soilStats.count  += 1;
 
-    printSoilStats();
+    // printSoilStats();
 }
 
 void Sensors::resetSoilStats() {

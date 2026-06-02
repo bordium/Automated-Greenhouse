@@ -1,31 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   View,
 } from "react-native";
+import Slider from "@react-native-community/slider";
 
 import { GreenhouseTheme } from "@/constants/greenhouse-theme";
 import { Mode, useMqtt } from "@/hooks/mqtt-context";
-import plantsData from "../../database/Database.json";
-
-type Plant = {
-  common_name: string;
-  scientific_name: string;
-  temp_air_c: string;
-  temp_water_c: string;
-  soil_moisture: string;
-  humidity: string;
-  nutrient: string;
-  ph: string;
-  min_germination_days: string;
-  max_germination_days: string;
-  instructions: string;
-};
 
 type TargetsForm = {
   air_temp: string;
@@ -48,6 +33,17 @@ const parseSoilBin = (raw?: string) => {
   return n;
 };
 
+// Hydroponics-App displays actuator strength as 0..100 % but the ESP32 PWM is
+// 8-bit (0..255). The mapping rounds DOWN to the nearest PWM step on publish,
+// and rounds to the nearest percent on receive so the slider visually snaps
+// back to the same percent the user picked.
+const percentToDuty = (p: number) => Math.floor((p / 100) * 255);
+const dutyToPercent = (d: number) => Math.round((d / 255) * 100);
+
+// Min time between mid-drag MQTT publishes. ~20 Hz feels smooth without
+// flooding the broker; final value is still always sent on slide-complete.
+const DRAG_PUBLISH_MS = 50;
+
 export default function ControlScreen() {
   const { telemetry, publish, status } = useMqtt();
   const liveTargets = telemetry?.targets;
@@ -55,10 +51,7 @@ export default function ControlScreen() {
 
   const [form, setForm] = useState<TargetsForm>(emptyForm);
   const [editingForm, setEditingForm] = useState(false);
-  const [searchText, setSearchText] = useState("");
-  const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
 
-  // Mirror live targets into the form until the user starts editing.
   useEffect(() => {
     if (editingForm || !liveTargets) return;
     setForm({
@@ -69,46 +62,7 @@ export default function ControlScreen() {
     });
   }, [liveTargets, editingForm]);
 
-  const plants = plantsData as Plant[];
-  const uniquePlants = useMemo(() => {
-    const seen = new Set<string>();
-    return plants.filter((p) => {
-      const name = p.common_name?.trim();
-      if (!name || seen.has(name.toLowerCase())) return false;
-      seen.add(name.toLowerCase());
-      return true;
-    });
-  }, [plants]);
-
-  const suggestions = useMemo(() => {
-    const q = searchText.trim().toLowerCase();
-    if (!q || selectedPlant?.common_name === searchText) return [];
-    return uniquePlants.filter((p) => p.common_name.toLowerCase().includes(q)).slice(0, 6);
-  }, [searchText, selectedPlant, uniquePlants]);
-
   const sendMode = (next: Mode) => publish("cmd/mode", next);
-
-  const applyPreset = (plant: Plant) => {
-    setSelectedPlant(plant);
-    setSearchText(plant.common_name);
-    const next: TargetsForm = {
-      air_temp:   plant.temp_air_c?.trim()   || form.air_temp,
-      water_temp: plant.temp_water_c?.trim() || form.water_temp,
-      humidity:   plant.humidity?.trim()     || form.humidity,
-      soil_bin:   plant.soil_moisture?.trim() || form.soil_bin,
-    };
-    setForm(next);
-    setEditingForm(true);
-
-    const payload: Record<string, number> = {};
-    if (next.air_temp)   payload.air_temp   = parseFloat(next.air_temp);
-    if (next.water_temp) payload.water_temp = parseFloat(next.water_temp);
-    if (next.humidity)   payload.humidity   = parseFloat(next.humidity);
-    const bin = parseSoilBin(next.soil_bin);
-    if (bin !== undefined) payload.soil_bin = bin;
-
-    publish("cmd/targets", JSON.stringify(payload));
-  };
 
   const sendTargets = () => {
     const payload: Record<string, number> = {};
@@ -147,43 +101,6 @@ export default function ControlScreen() {
         {status !== "connected" && (
           <Text style={styles.warnLine}>
             Not connected — commands may be dropped.
-          </Text>
-        )}
-      </View>
-
-      {/* --- Preset picker --- */}
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Plant Preset</Text>
-        <Text style={styles.helpText}>
-          Search the database to load a plant&apos;s recommended targets.
-        </Text>
-        <TextInput
-          style={styles.search}
-          placeholder="Type a plant, e.g. Lettuce"
-          value={searchText}
-          onChangeText={(t) => {
-            setSearchText(t);
-            setSelectedPlant(null);
-          }}
-        />
-        {suggestions.length > 0 && (
-          <View style={styles.suggestionBox}>
-            {suggestions.map((p) => (
-              <Pressable
-                key={p.common_name}
-                style={styles.suggestionItem}
-                onPress={() => applyPreset(p)}
-              >
-                <Text style={styles.suggestionTitle}>{p.common_name}</Text>
-                <Text style={styles.suggestionSub}>{p.scientific_name}</Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
-        {selectedPlant && (
-          <Text style={styles.helpText}>
-            Loaded preset:{" "}
-            <Text style={styles.bold}>{selectedPlant.common_name}</Text>
           </Text>
         )}
       </View>
@@ -230,39 +147,41 @@ export default function ControlScreen() {
         <Text style={styles.sectionTitle}>Actuators</Text>
         <Text style={styles.helpText}>
           {isManual
-            ? "Manual mode active — toggles drive hardware directly."
-            : "Pump, fan, and heaters are only honored in MANUAL mode. LED is always honored."}
+            ? "Manual mode — slide 0–100% (rounds down to the corresponding PWM step)."
+            : "Pump, fan, and heaters only respond in MANUAL mode. LED is always live."}
         </Text>
 
-        <ActuatorToggle
+        <ActuatorSlider
           label="Pump"
-          on={!!telemetry?.pump}
+          duty={telemetry?.pump ?? 0}
           disabled={!isManual}
-          onChange={(v) => publish("cmd/pump", v ? "1" : "0")}
+          onCommit={(d) => publish("cmd/pump", String(d))}
         />
-        <ActuatorToggle
+        <ActuatorSlider
           label="Fan"
-          on={(telemetry?.fan ?? 0) > 0}
+          duty={telemetry?.fan ?? 0}
           disabled={!isManual}
-          onChange={(v) => publish("cmd/fan", v ? "255" : "0")}
+          onCommit={(d) => publish("cmd/fan", String(d))}
         />
-        <ActuatorToggle
+        <ActuatorSlider
           label="Heater 1"
-          on={!!telemetry?.heater1}
+          duty={telemetry?.heater1 ?? 0}
           disabled={!isManual}
-          onChange={(v) => publish("cmd/heater1", v ? "1" : "0")}
+          onCommit={(d) => publish("cmd/heater1", String(d))}
+          warn="High duty heats fast — default AUTO duty is 5%."
         />
-        <ActuatorToggle
+        <ActuatorSlider
           label="Heater 2"
-          on={!!telemetry?.heater2}
+          duty={telemetry?.heater2 ?? 0}
           disabled={!isManual}
-          onChange={(v) => publish("cmd/heater2", v ? "1" : "0")}
+          onCommit={(d) => publish("cmd/heater2", String(d))}
+          warn="High duty heats fast — default AUTO duty is 5%."
         />
-        <ActuatorToggle
+        <ActuatorSlider
           label="LED"
-          on={(telemetry?.led ?? 0) > 0}
+          duty={telemetry?.led ?? 0}
           disabled={false}
-          onChange={(v) => publish("cmd/led", v ? "255" : "0")}
+          onCommit={(d) => publish("cmd/led", String(d))}
         />
       </View>
     </ScrollView>
@@ -319,27 +238,96 @@ function TargetField({
   );
 }
 
-function ActuatorToggle({
+/**
+ * Slider for a 0..100% power level. Snaps to the PWM step on publish — i.e.
+ * 50% → floor(50/100 * 255) = 127 PWM. Mirrors live telemetry when not being
+ * dragged. Publishes both during the drag (throttled) and on slide-complete.
+ */
+function ActuatorSlider({
   label,
-  on,
+  duty,
   disabled,
-  onChange,
+  onCommit,
+  warn,
 }: {
   label: string;
-  on: boolean;
+  duty: number;
   disabled: boolean;
-  onChange: (v: boolean) => void;
+  onCommit: (duty: number) => void;
+  warn?: string;
 }) {
+  const [localPct, setLocalPct] = useState(dutyToPercent(duty));
+  const draggingRef    = useRef(false);
+  const lastPublishRef = useRef(0);
+
+  // Snap to telemetry when we're not dragging.
+  useEffect(() => {
+    if (!draggingRef.current) setLocalPct(dutyToPercent(duty));
+  }, [duty]);
+
+  const on = localPct > 0;
+
   return (
-    <View style={[styles.toggleRow, disabled && { opacity: 0.5 }]}>
-      <Text style={styles.toggleLabel}>{label}</Text>
-      <Switch
-        value={on}
+    <View style={[styles.actuatorRow, disabled && { opacity: 0.45 }]}>
+      <View style={styles.actuatorHeader}>
+        <Text style={styles.actuatorLabel}>{label}</Text>
+        <View style={styles.actuatorRightGroup}>
+          <Text style={[
+            styles.actuatorPct,
+            { color: on ? GreenhouseTheme.primaryDark : GreenhouseTheme.textLight },
+          ]}>
+            {on ? `${localPct}%` : "OFF"}
+          </Text>
+          <Pressable
+            style={[
+              styles.offChip,
+              on ? { backgroundColor: GreenhouseTheme.primarySoft } : { backgroundColor: "#f3f4f6" },
+            ]}
+            disabled={disabled}
+            onPress={() => {
+              const nextPct = on ? 0 : 100;
+              setLocalPct(nextPct);
+              onCommit(percentToDuty(nextPct));
+            }}
+          >
+            <Text style={[
+              styles.offChipText,
+              { color: on ? GreenhouseTheme.primaryDark : GreenhouseTheme.textMuted },
+            ]}>
+              {on ? "OFF" : "ON"}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+      <Slider
+        style={styles.slider}
+        minimumValue={0}
+        maximumValue={100}
+        step={1}
+        value={localPct}
         disabled={disabled}
-        onValueChange={onChange}
-        trackColor={{ false: "#d1d5db", true: GreenhouseTheme.primary }}
-        thumbColor="white"
+        minimumTrackTintColor={GreenhouseTheme.primary}
+        maximumTrackTintColor="#e5e7eb"
+        thumbTintColor={GreenhouseTheme.primary}
+        onValueChange={(v) => {
+          draggingRef.current = true;
+          const rounded = Math.round(v);
+          setLocalPct(rounded);
+          const now = Date.now();
+          if (now - lastPublishRef.current >= DRAG_PUBLISH_MS) {
+            lastPublishRef.current = now;
+            onCommit(percentToDuty(rounded));
+          }
+        }}
+        onSlidingComplete={(v) => {
+          const finalPct = Math.round(v);
+          setLocalPct(finalPct);
+          draggingRef.current = false;
+          lastPublishRef.current = Date.now();
+          onCommit(percentToDuty(finalPct));
+        }}
       />
+      {warn && <Text style={styles.warnSmall}>{warn}</Text>}
     </View>
   );
 }
@@ -353,9 +341,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 17, fontWeight: "800", marginBottom: 12, color: GreenhouseTheme.text },
   helpText: { fontSize: 13, color: GreenhouseTheme.textMuted, marginBottom: 12 },
-  bold: { fontWeight: "700", color: GreenhouseTheme.text },
 
   warnLine: { fontSize: 12, color: GreenhouseTheme.warn, marginTop: 8 },
+  warnSmall: { fontSize: 11, color: GreenhouseTheme.warn, marginTop: 2 },
 
   modeRow: { flexDirection: "row", gap: 10 },
   modeBtn: {
@@ -365,18 +353,6 @@ const styles = StyleSheet.create({
   },
   modeBtnLabel: { fontSize: 18, fontWeight: "800", color: GreenhouseTheme.text },
   modeBtnSub: { fontSize: 12, color: GreenhouseTheme.textMuted, marginTop: 2 },
-
-  search: {
-    backgroundColor: "#f3f4f6", borderRadius: 12, padding: 12, fontSize: 16,
-    marginBottom: 10, borderWidth: 1, borderColor: "#e5e7eb",
-  },
-  suggestionBox: {
-    backgroundColor: "#f9fafb", borderRadius: 12, marginBottom: 10,
-    borderWidth: 1, borderColor: "#e5e7eb",
-  },
-  suggestionItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: "#e5e7eb" },
-  suggestionTitle: { fontSize: 16, fontWeight: "700", color: GreenhouseTheme.text },
-  suggestionSub: { fontSize: 12, color: GreenhouseTheme.textMuted, fontStyle: "italic" },
 
   field: { marginBottom: 12 },
   fieldLabel: { fontSize: 12, color: GreenhouseTheme.textMuted, marginBottom: 4 },
@@ -391,9 +367,18 @@ const styles = StyleSheet.create({
   },
   applyBtnText: { color: "white", fontWeight: "800", fontSize: 16 },
 
-  toggleRow: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#f3f4f6",
+  actuatorRow: {
+    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#f3f4f6",
   },
-  toggleLabel: { fontSize: 16, fontWeight: "700", color: GreenhouseTheme.text },
+  actuatorHeader: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+  },
+  actuatorLabel: { fontSize: 16, fontWeight: "700", color: GreenhouseTheme.text },
+  actuatorRightGroup: { flexDirection: "row", alignItems: "center", gap: 10 },
+  actuatorPct: { fontSize: 15, fontWeight: "800", minWidth: 44, textAlign: "right" },
+  offChip: {
+    paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999,
+  },
+  offChipText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5 },
+  slider: { width: "100%", height: 36, marginTop: 4 },
 });

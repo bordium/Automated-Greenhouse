@@ -41,8 +41,10 @@ static constexpr int PWM_FREQ_HZ   = 1000;
 static constexpr int PWM_RES_BITS  = 8;          // 0..255 — matches MQTT contract
 static constexpr int PWM_MAX_DUTY  = (1 << PWM_RES_BITS) - 1;
 
-// Heater duty cycle = 1/20 = 5%
-static constexpr int HEATER_DUTY      = PWM_MAX_DUTY / 20;
+// Heater duty cycle when the FSM turns heaters on in AUTO mode (55 %). The
+// app's manual slider is capped at 80 %, leaving headroom above the AUTO
+// default in case the operator wants to push a bit harder.
+static constexpr int HEATER_DUTY      = (PWM_MAX_DUTY * 55) / 100;
 static constexpr int LED_DEFAULT_DUTY = PWM_MAX_DUTY;   // LED fully on by default
 
 // ---------- Soil-moisture calibration ----------
@@ -107,6 +109,12 @@ namespace MqttKeys {
 #define GREENHOUSE_USE_WPA_ENTERPRISE 1
 #else
 #define GREENHOUSE_USE_WPA_ENTERPRISE 0
+#endif
+
+// Optional anonymous outer identity. If not set in .env we re-use the
+// EAP username for both outer and inner identity.
+#ifndef WIFI_EAP_ANON_IDENTITY
+#define WIFI_EAP_ANON_IDENTITY ""
 #endif
 
 #endif

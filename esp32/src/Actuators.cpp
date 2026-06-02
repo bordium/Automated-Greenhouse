@@ -16,8 +16,8 @@ void Actuators::begin() {
 
     setPump(0);
     setFan(0);
-    setHeater1(false);
-    setHeater2(false);
+    setHeater1(0);
+    setHeater2(0);
     setLed(LED_DEFAULT_DUTY);
 
     Serial.println("[Actuators] Initialized");
@@ -33,14 +33,14 @@ void Actuators::setFan(uint8_t duty) {
     ledcWrite(CH_FAN, duty);
 }
 
-void Actuators::setHeater1(bool on) {
-    _heater1On = on;
-    ledcWrite(CH_HEATER1, on ? HEATER_DUTY : 0);
+void Actuators::setHeater1(uint8_t duty) {
+    _heater1Duty = duty;
+    ledcWrite(CH_HEATER1, duty);
 }
 
-void Actuators::setHeater2(bool on) {
-    _heater2On = on;
-    ledcWrite(CH_HEATER2, on ? HEATER_DUTY : 0);
+void Actuators::setHeater2(uint8_t duty) {
+    _heater2Duty = duty;
+    ledcWrite(CH_HEATER2, duty);
 }
 
 void Actuators::setLed(uint8_t duty) {
@@ -49,11 +49,11 @@ void Actuators::setLed(uint8_t duty) {
 }
 
 void Actuators::heatersOn() {
-    setHeater1(true);
-    setHeater2(true);
+    setHeater1(HEATER_DUTY);
+    setHeater2(HEATER_DUTY);
 }
 
 void Actuators::heatersOff() {
-    setHeater1(false);
-    setHeater2(false);
+    setHeater1(0);
+    setHeater2(0);
 }
