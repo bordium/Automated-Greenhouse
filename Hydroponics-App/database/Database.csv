@@ -914,13 +914,13 @@ Violet,"Viola odorata, pedata, and sororia,",,,,,,,,,"Sow at 18-22ºC (64-71ºF)
 ,"Yucca baccata, filamentosa, and glauca,",,,,,,,,,"Sow at 22-24ºC (71-75ºF), germination in less than 2 weeks"
 ,"Zigadenus elegans, nuttallii, and venosus,",,,,,,,,,"Sow at 20ºC (68ºF), germination slow"
 ,"Zizea aptera , and aurea,",,,,,,,,,"Sow at -4 to +4ºC (24-39ºF) for 12 wks, move to 20ºC (68ºF) for germination"
-Radish,Raphanus sativus,18.0,15.0,3,70.0,1.8,6.5,3,5,Sow direct 1cm deep. Keep soil consistently moist. Germinates rapidly at 10-18°C.
-Lettuce,Lactuca sativa,16.0,13.0,3,65.0,1.5,6.2,2,4,"Surface sow, needs light to germinate. Keep at 15-18°C. Thin to 20cm apart."
-Spinach,Spinacia oleracea,15.0,10.0,3,60.0,2.0,6.5,5,7,Sow 2cm deep. Prefers cool conditions 10-18°C. Bolts in heat.
-Arugula,Eruca vesicaria,18.0,14.0,2,55.0,1.5,6.5,3,5,Sow 0.5cm deep in rows. Germinates readily at 15-20°C. Harvest young.
-Mustard Greens,Brassica juncea,18.0,14.0,3,60.0,1.8,6.0,3,5,"Sow 1cm deep. Cool season crop, best at 10-20°C. Fast grower."
-Kale,Brassica oleracea,16.0,12.0,3,65.0,2.2,6.5,5,7,Sow 1cm deep at 15-20°C. Transplant after 4-6 weeks. Frost tolerant.
-Cucumber,Cucumis sativus,24.0,21.0,4,75.0,2.5,6.5,3,7,Sow 2cm deep. Needs warmth 20-30°C. Sow indoors 3 weeks before last frost.
-Bean,Phaseolus vulgaris,22.0,18.0,3,60.0,1.2,6.5,4,7,Sow 4cm deep direct. Do not soak. Needs 18-24°C. Very visible germination.
-Pea,Pisum sativum,15.0,10.0,3,60.0,1.2,6.5,5,7,"Sow 3cm deep. Cool season, best at 7-18°C. Soak seed overnight to speed germination."
-Basil,Ocimum basilicum,22.0,20.0,2,65.0,1.8,6.5,5,7,"Surface sow, needs light. Keep at 20-25°C. Very sensitive to cold."
+Radish,Raphanus sativus,18.0,16.0,3,65.0,1.8,6.3,3,5,"Sow direct 1cm deep. Keep medium evenly moist, not waterlogged. Germinates quickly in cool to mild conditions."
+Lettuce,Lactuca sativa,18.0,16.0,3,65.0,1.2,5.8,2,7,"Surface sow or barely cover; needs light for best germination. Keep cool and evenly moist. Avoid warm conditions above about 25°C."
+Spinach,Spinacia oleracea,16.0,14.0,3,65.0,2.0,6.2,5,10,"Sow 1-2cm deep. Prefers cool conditions. Keep evenly moist; germination becomes poor in warm conditions."
+Arugula,Eruca vesicaria,18.0,16.0,3,60.0,1.2,6.2,3,6,"Sow 0.5cm deep. Germinates readily in cool to mild conditions. Keep evenly moist and harvest young."
+Mustard Greens,Brassica juncea,18.0,16.0,3,60.0,1.8,6.2,3,6,"Sow 0.5-1cm deep. Cool-season crop. Keep evenly moist for fast germination and mild flavor."
+Kale,Brassica oleracea,18.0,16.0,3,65.0,2.0,6.2,5,8,"Sow 0.5-1cm deep. Germinates best in cool to mild conditions. Transplant after 4-6 weeks if started indoors."
+Cucumber,Cucumis sativus,26.0,24.0,4,75.0,2.2,5.8,3,7,"Sow 1-2cm deep. Needs warmth for fast germination. Keep medium very moist but well-aerated; avoid cold water."
+Bean,Phaseolus vulgaris,24.0,22.0,3,60.0,2.0,6.3,4,8,"Sow 2.5-4cm deep direct. Keep moist but do not overwater. Needs warm conditions and can rot if kept too wet."
+Pea,Pisum sativum,16.0,14.0,3,60.0,1.4,6.5,5,10,"Sow 2.5-3cm deep. Cool-season crop. Keep evenly moist; a brief soak can speed germination."
+Basil,Ocimum basilicum,24.0,22.0,3,65.0,1.3,5.8,5,10,"Surface sow or barely cover; needs light. Keep warm and evenly moist. Very sensitive to cold."

@@ -49,7 +49,7 @@ The probe gives an analog voltage that ESP32 reads via `analogRead()`:
 
 | Raw ADC | Condition |
 |---------|-----------|
-| ~1400   | submerged (100% wet)  |
+| ~1607   | submerged (100% wet)  |
 | ~2880   | air dry (0% moisture) |
 
 Conversion:
@@ -91,8 +91,8 @@ All topics are under `${MQTT_TOPIC_PREFIX}/`.
   "soil_bin":       2,          // 1, 2, or 3 (nearest bin)
   "pump":           0,          // 0..255 duty
   "fan":            128,        // 0..255 duty
-  "heater1":        12,         // 0..255 duty (AUTO uses 12 ≈ 5%)
-  "heater2":        12,
+  "heater1":        140,        // 0..255 duty (AUTO uses 140 ≈ 55%)
+  "heater2":        140,
   "led":            255,        // 0..255 duty
   "uptime_ms":      123456,
   "targets": {                  // echoed back so the app stays in sync
@@ -112,8 +112,8 @@ All topics are under `${MQTT_TOPIC_PREFIX}/`.
 | `cmd/targets`         | JSON (see below)                     | overwrite any subset of targets |
 | `cmd/pump`            | `0..255` (PWM duty)                  | manual mode only; 0 = off |
 | `cmd/fan`             | `0..255` (PWM duty)                  | manual mode only |
-| `cmd/heater1`         | `0..255` (PWM duty)                  | manual mode only; AUTO uses 5 % |
-| `cmd/heater2`         | `0..255` (PWM duty)                  | manual mode only; AUTO uses 5 % |
+| `cmd/heater1`         | `0..255` (PWM duty)                  | manual mode only; AUTO uses 55 % |
+| `cmd/heater2`         | `0..255` (PWM duty)                  | manual mode only; AUTO uses 55 % |
 | `cmd/led`             | `0..255` (PWM duty)                  | always honored regardless of mode |
 
 `cmd/targets` payload:
@@ -143,7 +143,7 @@ Outputs per active action (additive — flags OR together):
 | none (IDLE)    | off  | off | off     | off     | user duty |
 | PUMPING        | ON   | -   | -       | -       | user duty |
 | VENTING        | -    | ON  | -       | -       | user duty |
-| HEATING        | -    | -   | ON (5%) | ON (5%) | user duty |
+| HEATING        | -    | -   | ON (55%) | ON (55%) | user duty |
 
 (`-` means "unchanged by this flag" — the actuator's state is determined by
 whichever flags are set; if no flag claims it, it's off.)

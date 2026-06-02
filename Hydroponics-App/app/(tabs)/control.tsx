@@ -167,15 +167,17 @@ export default function ControlScreen() {
           label="Heater 1"
           duty={telemetry?.heater1 ?? 0}
           disabled={!isManual}
+          maxPercent={80}
           onCommit={(d) => publish("cmd/heater1", String(d))}
-          warn="High duty heats fast — default AUTO duty is 5%."
+          warn="Capped at 80 % for safety — AUTO uses 55 %."
         />
         <ActuatorSlider
           label="Heater 2"
           duty={telemetry?.heater2 ?? 0}
           disabled={!isManual}
+          maxPercent={80}
           onCommit={(d) => publish("cmd/heater2", String(d))}
-          warn="High duty heats fast — default AUTO duty is 5%."
+          warn="Capped at 80 % for safety — AUTO uses 55 %."
         />
         <ActuatorSlider
           label="LED"
@@ -249,21 +251,25 @@ function ActuatorSlider({
   disabled,
   onCommit,
   warn,
+  maxPercent = 100,
 }: {
   label: string;
   duty: number;
   disabled: boolean;
   onCommit: (duty: number) => void;
   warn?: string;
+  maxPercent?: number;
 }) {
-  const [localPct, setLocalPct] = useState(dutyToPercent(duty));
+  const clamp = (p: number) => Math.min(Math.max(0, p), maxPercent);
+  const [localPct, setLocalPct] = useState(clamp(dutyToPercent(duty)));
   const draggingRef    = useRef(false);
   const lastPublishRef = useRef(0);
 
-  // Snap to telemetry when we're not dragging.
+  // Snap to telemetry when we're not dragging — clamped to the cap so the
+  // slider thumb never sits above the allowed maximum.
   useEffect(() => {
-    if (!draggingRef.current) setLocalPct(dutyToPercent(duty));
-  }, [duty]);
+    if (!draggingRef.current) setLocalPct(clamp(dutyToPercent(duty)));
+  }, [duty, maxPercent]);
 
   const on = localPct > 0;
 
@@ -285,7 +291,7 @@ function ActuatorSlider({
             ]}
             disabled={disabled}
             onPress={() => {
-              const nextPct = on ? 0 : 100;
+              const nextPct = on ? 0 : maxPercent;
               setLocalPct(nextPct);
               onCommit(percentToDuty(nextPct));
             }}
@@ -302,7 +308,7 @@ function ActuatorSlider({
       <Slider
         style={styles.slider}
         minimumValue={0}
-        maximumValue={100}
+        maximumValue={maxPercent}
         step={1}
         value={localPct}
         disabled={disabled}
@@ -311,7 +317,7 @@ function ActuatorSlider({
         thumbTintColor={GreenhouseTheme.primary}
         onValueChange={(v) => {
           draggingRef.current = true;
-          const rounded = Math.round(v);
+          const rounded = clamp(Math.round(v));
           setLocalPct(rounded);
           const now = Date.now();
           if (now - lastPublishRef.current >= DRAG_PUBLISH_MS) {
@@ -320,7 +326,7 @@ function ActuatorSlider({
           }
         }}
         onSlidingComplete={(v) => {
-          const finalPct = Math.round(v);
+          const finalPct = clamp(Math.round(v));
           setLocalPct(finalPct);
           draggingRef.current = false;
           lastPublishRef.current = Date.now();

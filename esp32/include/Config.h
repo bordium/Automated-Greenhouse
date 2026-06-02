@@ -51,7 +51,7 @@ static constexpr int LED_DEFAULT_DUTY = PWM_MAX_DUTY;   // LED fully on by defau
 // Raw ADC readings on PIN_SOIL_DAT.
 //   ADC == SOIL_ADC_WET  -> 100 % moisture
 //   ADC == SOIL_ADC_DRY  ->   0 % moisture
-static constexpr int   SOIL_ADC_WET = 1400;
+static constexpr int   SOIL_ADC_WET = 1607;
 static constexpr int   SOIL_ADC_DRY = 2880;
 // Bin -> target percent. Lettuce in the DB lists "3" -> 60 %.
 static constexpr float SOIL_BIN_PCT[4] = { 0.0f, 20.0f, 40.0f, 60.0f };
@@ -69,7 +69,7 @@ static constexpr float HUMID_DEADBAND_PCT = 5.0f;
 static constexpr float SOIL_DEADBAND_PCT  = 5.0f;
 
 static constexpr uint32_t PUMP_RUN_MS       = 5000;   // run pump 5 s when triggered
-static constexpr uint32_t PUMP_COOLDOWN_MS  = 30000;  // wait 30 s before pumping again
+static constexpr uint32_t PUMP_COOLDOWN_MS  = 5000;  // wait 5 s before pumping again
 static constexpr uint32_t SENSOR_PERIOD_MS  = 1000;   // sensor sample period
 static constexpr uint32_t MQTT_PERIOD_MS    = 1000;   // telemetry publish period
 
