@@ -53,8 +53,9 @@ static constexpr int LED_DEFAULT_DUTY = PWM_MAX_DUTY;   // LED fully on by defau
 //   ADC == SOIL_ADC_DRY  ->   0 % moisture
 static constexpr int   SOIL_ADC_WET = 1607;
 static constexpr int   SOIL_ADC_DRY = 2880;
-// Bin -> target percent. Lettuce in the DB lists "3" -> 60 %.
-static constexpr float SOIL_BIN_PCT[4] = { 0.0f, 20.0f, 40.0f, 60.0f };
+// Bin -> target percent. Real plants use 1..3 (Lettuce -> 3 -> 60 %).
+// Bins 4 and 5 (80 % / 100 %) exist for test profiles that force pumping.
+static constexpr float SOIL_BIN_PCT[6] = { 0.0f, 20.0f, 40.0f, 60.0f, 80.0f, 100.0f };
 
 // ---------- Default AUTO-mode targets (used until app overrides them) ----------
 // These match lettuce so a fresh boot does something sensible.

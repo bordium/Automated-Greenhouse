@@ -237,12 +237,20 @@ void loop() {
         sensors.update();
         fsm.tick(sensors.latest());
         String stateStr = actionsShortLabel(fsm.actions());
+        ActuatorDuties duties = {
+            actuators.pumpDuty(),
+            actuators.fanDuty(),
+            actuators.heater1Duty(),
+            actuators.heater2Duty(),
+            actuators.ledDuty(),
+        };
         display.renderStatus(sensors.latest(),
                              stateStr.c_str(),
                              fsm.modeLabel(),
                              fsm.targets(),
                              wifi.isConnected(),
-                             mqtt.isConnected());
+                             mqtt.isConnected(),
+                             duties);
     }
 
     if (now - lastPublishMs >= MQTT_PERIOD_MS) {

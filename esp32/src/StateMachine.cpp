@@ -52,7 +52,7 @@ void StateMachine::setMode(GhMode m) {
 float StateMachine::_soilTargetPct() const {
     int b = _targets.soilBin;
     if (b < 1) b = 1;
-    if (b > 3) b = 3;
+    if (b > 5) b = 5;
     return SOIL_BIN_PCT[b];
 }
 

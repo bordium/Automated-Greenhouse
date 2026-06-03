@@ -29,7 +29,7 @@ const emptyForm: TargetsForm = {
 const parseSoilBin = (raw?: string) => {
   if (!raw) return undefined;
   const n = parseInt(raw, 10);
-  if (Number.isNaN(n) || n < 1 || n > 3) return undefined;
+  if (Number.isNaN(n) || n < 1 || n > 5) return undefined;
   return n;
 };
 
@@ -109,7 +109,7 @@ export default function ControlScreen() {
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Targets</Text>
         <Text style={styles.helpText}>
-          Soil bin: 1 = 20% • 2 = 40% • 3 = 60%
+          Soil bin: 1 = 20% • 2 = 40% • 3 = 60% • 4 = 80% • 5 = 100%
         </Text>
 
         <TargetField
@@ -131,7 +131,7 @@ export default function ControlScreen() {
           keyboardType="decimal-pad"
         />
         <TargetField
-          label="Soil moisture bin (1-3)"
+          label="Soil moisture bin (1-5)"
           value={form.soil_bin}
           onChangeText={(v) => { setEditingForm(true); setForm({ ...form, soil_bin: v }); }}
           keyboardType="number-pad"

@@ -31,7 +31,7 @@ void Display::_drawStaticLayout() {
     _tft.setTextColor(ST77XX_WHITE);
     _tft.setTextSize(2);
     _tft.setCursor(10, 12);
-    _tft.print("Greenhouse");
+    _tft.print("AutoGreen");
 
     _layoutDrawn = true;
 }
@@ -77,6 +77,58 @@ static void _printCell(Adafruit_ST7789& tft, int x, int y, int w,
     tft.print(value);
 }
 
+// Five small actuator annotations rendered as a single strip across the
+// bottom of the display, just above the connection footer. Only shown in
+// MANUAL mode (in AUTO the STATUS row already conveys what's running).
+void Display::_printActuatorStrip(const ActuatorDuties& act) {
+    const int w     = _tft.width();          // 320
+    const int y     = _tft.height() - 22 - 36;  // above footer (which is height 22)
+    const int h     = 36;
+    const int cellW = w / 5;                 // 64 px each
+
+    _tft.fillRect(0, y, w, h, ST77XX_BLACK);
+
+    struct Item { const char* label; uint8_t duty; };
+    Item items[5] = {
+        {"PUMP", act.pump},
+        {"FAN",  act.fan},
+        {"HTR1", act.heater1},
+        {"HTR2", act.heater2},
+        {"LED",  act.led},
+    };
+
+    for (int i = 0; i < 5; ++i) {
+        const int x   = i * cellW;
+        const bool on = items[i].duty > 0;
+        // Round-to-nearest %, matching the app's dutyToPercent().
+        const int pct = (items[i].duty * 100 + 127) / 255;
+
+        // Label in muted grey
+        _tft.setTextSize(1);
+        _tft.setTextColor(0x8410, ST77XX_BLACK);
+        _tft.setCursor(x + 6, y + 4);
+        _tft.print(items[i].label);
+
+        // Value in bright green when on, dim grey when off
+        _tft.setTextSize(2);
+        _tft.setTextColor(on ? ST77XX_GREEN : 0x4208, ST77XX_BLACK);
+        _tft.setCursor(x + 6, y + 16);
+        if (on) {
+            char buf[8];
+            snprintf(buf, sizeof(buf), "%d%%", pct);
+            _tft.print(buf);
+        } else {
+            _tft.print("OFF");
+        }
+    }
+}
+
+void Display::_clearActuatorStrip() {
+    const int w = _tft.width();
+    const int y = _tft.height() - 22 - 36;
+    _tft.fillRect(0, y, w, 36, ST77XX_BLACK);
+}
+
 void Display::_printFooter(bool wifiOk, bool mqttOk) {
     int w = _tft.width();
     int h = _tft.height();
@@ -98,7 +150,8 @@ void Display::renderStatus(const SensorReading& r,
                            const char* modeLabel,
                            const Targets& targets,
                            bool wifiOk,
-                           bool mqttOk) {
+                           bool mqttOk,
+                           const ActuatorDuties& act) {
     if (!_layoutDrawn) _drawStaticLayout();
     int w = _tft.width();   // 320
 
@@ -135,12 +188,19 @@ void Display::renderStatus(const SensorReading& r,
 
     int bin = targets.soilBin;
     if (bin < 1) bin = 1;
-    if (bin > 3) bin = 3;
+    if (bin > 5) bin = 5;
     float targetSoilPct = SOIL_BIN_PCT[bin];
     String soil = r.soilOk
         ? String(r.soilPct, 0) + "% (" + String(targetSoilPct, 0) + ")"
         : "--";
     _printCell(_tft, colW, rowY2, colW, "SOIL", soil, ST77XX_WHITE);
+
+    // Actuator strip only in MANUAL mode — in AUTO the STATUS row covers it.
+    if (strcmp(modeLabel, "MANUAL") == 0) {
+        _printActuatorStrip(act);
+    } else {
+        _clearActuatorStrip();
+    }
 
     _printFooter(wifiOk, mqttOk);
 }

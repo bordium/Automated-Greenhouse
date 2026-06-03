@@ -68,10 +68,10 @@ void Sensors::_readSoil() {
     _latest.soilPct = pct;
     _latest.soilOk  = true;
 
-    // Snap to nearest configured bin (20/40/60 %).
+    // Snap to nearest configured bin (1..5: 20/40/60/80/100 %).
     int   bestBin  = 1;
     float bestDist = 1e9f;
-    for (int b = 1; b <= 3; ++b) {
+    for (int b = 1; b <= 5; ++b) {
         float d = fabsf(pct - SOIL_BIN_PCT[b]);
         if (d < bestDist) { bestDist = d; bestBin = b; }
     }

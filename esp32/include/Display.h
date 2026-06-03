@@ -9,6 +9,15 @@
 #include "Sensors.h"
 #include "StateMachine.h"
 
+/** Snapshot of all five actuator duty values (0..255) for the LCD strip. */
+struct ActuatorDuties {
+    uint8_t pump;
+    uint8_t fan;
+    uint8_t heater1;
+    uint8_t heater2;
+    uint8_t led;
+};
+
 class Display {
 public:
     Display();
@@ -22,7 +31,8 @@ public:
                       const char* modeLabel,
                       const Targets& targets,
                       bool wifiOk,
-                      bool mqttOk);
+                      bool mqttOk,
+                      const ActuatorDuties& act);
 
 private:
     SPIClass        _spi;
@@ -32,6 +42,8 @@ private:
     void _drawStaticLayout();
     void _printRow(int y, const char* label, const String& value, uint16_t color);
     void _printFooter(bool wifiOk, bool mqttOk);
+    void _printActuatorStrip(const ActuatorDuties& act);
+    void _clearActuatorStrip();
 };
 
 #endif

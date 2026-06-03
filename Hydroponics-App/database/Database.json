@@ -11988,8 +11988,8 @@
   {
     "common_name": "Bean",
     "scientific_name": "Phaseolus vulgaris",
-    "temp_air_c": "22.0",
-    "temp_water_c": "18.0",
+    "temp_air_c": "28.0",
+    "temp_water_c": "25.0",
     "soil_moisture": "3",
     "humidity": "60.0",
     "nutrient": "1.2",
@@ -12023,5 +12023,44 @@
     "min_germination_days": "5",
     "max_germination_days": "7",
     "instructions": "Surface sow, needs light. Keep at 20-25°C. Very sensitive to cold."
+  },
+  {
+    "common_name": "Test 1",
+    "scientific_name": "Heating test profile",
+    "temp_air_c": "24.6",
+    "temp_water_c": "24.3",
+    "soil_moisture": "1",
+    "humidity": "85.0",
+    "nutrient": "",
+    "ph": "",
+    "min_germination_days": "",
+    "max_germination_days": "",
+    "instructions": "TEST PROFILE — forces HEATING in AUTO mode. Air target 24.6°C makes a normal room (~22°C) read 'too cold' and run the heaters; humidity target 85% blocks venting; soil bin 1 (20%) blocks pumping. Expect heaters only."
+  },
+  {
+    "common_name": "Test 2",
+    "scientific_name": "Pumping test profile",
+    "temp_air_c": "22.0",
+    "temp_water_c": "22.0",
+    "soil_moisture": "5",
+    "humidity": "85.0",
+    "nutrient": "",
+    "ph": "",
+    "min_germination_days": "",
+    "max_germination_days": "",
+    "instructions": "TEST PROFILE — forces PUMPING in AUTO mode. Soil bin 5 (100%) keeps the pump running until moisture >=95%; air/humidity targets sit at typical room values so neither heater nor fan triggers. Expect pump only."
+  },
+  {
+    "common_name": "Test 3",
+    "scientific_name": "Venting test profile",
+    "temp_air_c": "16.0",
+    "temp_water_c": "13.0",
+    "soil_moisture": "1",
+    "humidity": "85.0",
+    "nutrient": "",
+    "ph": "",
+    "min_germination_days": "",
+    "max_germination_days": "",
+    "instructions": "TEST PROFILE — forces VENTING in AUTO mode. Air target 16°C makes a normal room (~22°C) read 'too hot' and run the fan; humidity target 85% keeps the vent purely temperature-driven; soil bin 1 (20%) blocks pumping. Expect fan only."
   }
 ]

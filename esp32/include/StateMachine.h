@@ -52,7 +52,7 @@ public:
     void patchTarget_waterTemp(float v) { _targets.waterTempC = v; }
     void patchTarget_humidity(float v)  { _targets.humidity   = v; }
     void patchTarget_soilBin(int b)     {
-        if (b >= 1 && b <= 3) _targets.soilBin = b;
+        if (b >= 1 && b <= 5) _targets.soilBin = b;
     }
 
 private:
